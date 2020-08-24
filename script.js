@@ -1,161 +1,102 @@
-const yourShip = document.querySelector('.player-shooter');
-const playArea = document.querySelector('#main-play-area');
-const aliensImg = ['img/enyme1.png', 'img/enyme2.png', 'img/enyme3.png'];
-const instrucionsText = document.querySelector('.game-instructions');
-const startButton = document.querySelector('.start-button');
-let alienInterval;
+let order = [];
+let clickedBorder = [];
+let score = 0;
 
-//movimento e tiro da nave
-function flyShip(event) {
-    if(event.key === 'ArrowUp') {
-        event.preventDefault();
-        moveUp();
-    } else if(event.key === 'ArrowDown') {
-        event.preventDefault();
-        moveDown();
-    } else if(event.key === " ") {
-        event.preventDefault();
-        fireLaser();
+// 0 verde, 1 vermelho, 2 amarelo, 3 azul
+const blue = document.querySelector('.blue');
+const red = document.querySelector('.red');
+const green = document.querySelector('.green');
+const yellow = document.querySelector('.yellow');
+
+// criando ordem aleatória
+let shuffleOrder = () => {
+    let colorOrder = Math.floor(Math.random() * 4);
+    order[order.length] = colorOrder;
+    clickedOrder = [];
+
+    for (let i in order) {
+        let elementColor = createColorElement(order[i]);
+        lightColor(elementColor, Number(i) + 1);
     }
 }
 
-//função de subir
-function moveUp() {
-    let topPosition = getComputedStyle(yourShip).getPropertyValue('top');
-    if(topPosition === "0px") {
-        return
-    } else {
-        let position = parseInt(topPosition);
-        position -= 50;
-        yourShip.style.top = `${position}px`;
-    }
-}
-
-//função de descer
-function moveDown() {
-    let topPosition = getComputedStyle(yourShip).getPropertyValue('top');
-    if(topPosition === "510px"){
-        return
-    } else {
-        let position = parseInt(topPosition);
-        position += 50;
-        yourShip.style.top = `${position}px`;
-    }
-}
-
-//funcionalidade de tiro
-function fireLaser() {
-    let laser = createLaserElement();
-    playArea.appendChild(laser);
-    moveLaser(laser);
-}
-
-function createLaserElement() {
-    let xPosition = parseInt(window.getComputedStyle(yourShip).getPropertyValue('left'));
-    let yPosition = parseInt(window.getComputedStyle(yourShip).getPropertyValue('top'));
-    let newLaser = document.createElement('img');
-    newLaser.src = 'img/laser.png';
-    newLaser.classList.add('laser');
-    newLaser.style.left = `${xPosition}px`;
-    newLaser.style.top = `${yPosition - 10}px`;
-    return newLaser;
-}
-
-function moveLaser(laser) {
-    let laserInterval = setInterval(() => {
-        let xPosition = parseInt(laser.style.left);
-        let aliens = document.querySelectorAll('.alien');
-
-        aliens.forEach((alien) => { 
-            if(checkLaserCollision(laser, alien)) {
-                alien.src = 'img/explosion.png';
-                alien.classList.remove('alien');
-                alien.classList.add('dead-alien');
-            }
-        })
-
-        if(xPosition === 340) {
-            laser.remove();
-        } else {
-            laser.style.left = `${xPosition + 8}px`;
-        }
-    }, 10);
-}
-
-//função para criar inimigos aleatórios
-function createAliens() {
-    let newAlien = document.createElement('img');
-    let alienSprite = aliensImg[Math.floor(Math.random() * aliensImg.length)]; //sorteio de imagens
-    newAlien.src = alienSprite;
-    newAlien.classList.add('alien');
-    newAlien.classList.add('alien-transition');
-    newAlien.style.left = '370px';
-    newAlien.style.top = `${Math.floor(Math.random() * 330) + 30}px`;
-    playArea.appendChild(newAlien);
-    moveAlien(newAlien);
-}
-
-//função para movimentar os inimigos
-function moveAlien(alien) {
-    let moveAlienInterval = setInterval(() => {
-        let xPosition = parseInt(window.getComputedStyle(alien).getPropertyValue('left'));
-        if(xPosition <= 50) {
-            if(Array.from(alien.classList).includes('dead-alien')) {
-                alien.remove();
-            } else {
-                gameOver();
-            }
-        } else {
-            alien.style.left = `${xPosition - 4}px`;
-        }
-    }, 30);
-}
-
-//função para  colisão
-function checkLaserCollision(laser, alien) {
-    let laserTop = parseInt(laser.style.top);
-    let laserLeft = parseInt(laser.style.left);
-    let laserBottom = laserTop - 20;
-    let alienTop = parseInt(alien.style.top);
-    let alienLeft = parseInt(alien.style.left);
-    let alienBottom = alienTop - 30;
-    if(laserLeft != 340 && laserLeft + 40 >= alienLeft) {
-        if(laserTop <= alienTop && laserTop >= alienBottom) {
-            return true;
-        } else {
-            return false;
-        }
-    } else {
-        return false;
-    }
-}
-
-//inicio do jogo
-startButton.addEventListener('click', (event) => {
-    playGame();
-})
-
-function playGame() {
-    startButton.style.display = 'none';
-    instrucionsText.style.display = 'none';
-    window.addEventListener('keydown', flyShip);
-    alienInterval = setInterval(() => {
-        createAliens();
-    }, 2000);
-}
-
-//função de game over
-function gameOver() {
-    window.removeEventListener('keydown', flyShip);
-    clearInterval(alienInterval);
-    let aliens = document.querySelectorAll('.alien');
-    aliens.forEach((alien) => alien.remove());
-    let lasers = document.querySelectorAll('.laser');
-    lasers.forEach((laser) => laser.remove());
+// acende a proxima cor
+let lightColor = (element, number) => {
+    number = number * 500;
     setTimeout(() => {
-        alert('game over!');
-        yourShip.style.top = "250px";
-        startButton.style.display = "block";
-        instrucionsText.style.display = "block";
+        element.classList.add('selected');
+    }, number - 250);
+    setTimeout(() => {
+        element.classList.remove('selected');
     });
 }
+
+// checa se os botoes clicados foram os mesmos da ordem gerada no jogo
+let checkOrder = () => {
+    for (let i in clickedOrder) {
+        if (clickedOrder[i] != order[i]) {
+            gameOver();
+            break;
+        }
+    }
+    if (clickedOrder.length == order.length) {
+        alert(`Pontuação: ${score}!\nVocê perdeu o jogo!\nClique em OK para iniciar um novo jogo`);
+        nextLevel();      
+    }
+}
+
+// funcao para o clique do usuario
+let click = (color) => {
+    clickedOrder[clickedOrder.length] = color;
+    createColorElement(color).classList.add('selected');
+
+    setTimeout(() => {
+        createColorElement(color).classList.remove('selected');
+        checkOrder();
+    }, 250);
+}
+
+// função que retorna a cor
+let createColorElement = (color) => {
+    if(color == 0) {
+        return green;
+    } else if (color == 1) {
+        return red;
+    } else if (color == 2) {
+        return yellow;
+    } else if (color == 3) {
+        return blue;
+    }
+}
+
+// função para proximo nível
+let nextLevel = () => {
+    score++;
+    shuffleOrder();
+}
+
+// função game over
+let gameOver = () => {
+    alert(`Pontuação: ${score}!\nVocê perdeu o jogo!\nClique em OK para iniciar um novo jogo`);
+    order = [];
+    clickedOrder = [];
+
+    playGame();
+}
+
+// inicio do jogo
+let playGame = () => {
+    alert('Bem-vindo ao Genesis! Iniciando novo jogo!');
+    score = 0;
+
+    nextLevel();
+}
+
+// clique para as cores
+green.onclick = () => click(0);
+red.onclick = () => click(1);
+yellow.onclick = () => click(2);
+blue.onclick = () => click(3);
+
+// inicio do jogo
+playGame();
